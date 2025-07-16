@@ -1,17 +1,19 @@
-name: Deploy All Microservices to EKS
+name: Deploy Helm Chart to EKS
 
 on:
   push:
     branches:
-      - master  # or change to your deployment branch
+      - main  # or your deployment branch
 
 env:
   AWS_REGION: ap-south-1
   EKS_CLUSTER_NAME: devops-eks-demo
+  RELEASE_NAME: robot-shop
+  NAMESPACE: robot-shop
 
 jobs:
   deploy:
-    name: Deploy to EKS
+    name: Deploy via Helm
     runs-on: ubuntu-latest
 
     steps:
@@ -36,6 +38,12 @@ jobs:
           --region $AWS_REGION \
           --name $EKS_CLUSTER_NAME
 
-    - name: Apply all microservices YAMLs
+    - name: Setup Helm
+      uses: azure/setup-helm@v4
+
+    - name: Deploy with Helm
       run: |
-        kubectl apply -f EKS/helm/templates/
+        helm upgrade --install $RELEASE_NAME ./EKS/helm \
+          --namespace $NAMESPACE \
+          --create-namespace
+

@@ -3,7 +3,7 @@ name: Deploy Helm Chart to EKS
 on:
   push:
     branches:
-      - main  # or your deployment branch
+      - master  # or your deployment branch
 
 env:
   AWS_REGION: ap-south-1

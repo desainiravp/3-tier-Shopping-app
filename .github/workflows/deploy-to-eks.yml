@@ -1,9 +1,9 @@
-name: Deploy Helm Chart to EKS
+name: Deploy Robot Shop to EKS with NGINX Ingress
 
 on:
   push:
     branches:
-      - master  # or your deployment branch
+      - master
 
 env:
   AWS_REGION: ap-south-1
@@ -13,11 +13,10 @@ env:
 
 jobs:
   deploy:
-    name: Deploy via Helm
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
+    - name: Checkout Repository
       uses: actions/checkout@v4
 
     - name: Configure AWS Credentials
@@ -41,9 +40,26 @@ jobs:
     - name: Setup Helm
       uses: azure/setup-helm@v4
 
-    - name: Deploy with Helm
+    - name: Install NGINX Ingress Controller (if not already)
+      run: |
+        kubectl get ns ingress-nginx || \
+        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/aws/deploy.yaml
+
+    - name: Wait for NGINX LoadBalancer EXTERNAL-IP
+      run: |
+        echo "Waiting for NGINX ingress load balancer to get an external IP..."
+        for i in {1..30}; do
+          EXTERNAL_IP=$(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          if [[ -n "$EXTERNAL_IP" ]]; then
+            echo "External IP: $EXTERNAL_IP"
+            break
+          fi
+          echo "Retrying in 10s..."
+          sleep 10
+        done
+
+    - name: Deploy Robot Shop via Helm
       run: |
         helm upgrade --install $RELEASE_NAME ./EKS/helm \
           --namespace $NAMESPACE \
           --create-namespace
-
